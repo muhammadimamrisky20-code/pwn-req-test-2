@@ -1,0 +1,48 @@
+name: 'Release: Patch (0) from Comment (POC REPLICA)'
+
+on:
+  issue_comment:
+    types: ['created']
+
+jobs:
+  slash-command:
+    runs-on: 'ubuntu-latest'
+    if: "github.event.comment.user.type == 'User' && github.event.comment.user.login != 'github-actions[bot]'"
+    permissions:
+      contents: 'write'
+      pull-requests: 'write'
+      actions: 'write'
+    steps:
+      - name: 'Checkout'
+        uses: 'actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8'
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: 'Slash Command Dispatch'
+        id: 'slash_command'
+        uses: 'peter-evans/slash-command-dispatch@40877f718dce0101edfc7aea2b3800cc192f9ed5'
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          commands: 'patch'
+          permission: 'write'
+          issue-type: 'pull-request'
+
+      - name: 'Get PR Status'
+        id: 'pr_status'
+        if: "startsWith(github.event.comment.body, '/patch')"
+        env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        run: |
+          gh pr view "${{ github.event.issue.number }}" --json mergeCommit,state > pr_status.json
+          echo "MERGE_COMMIT_SHA=$(jq -r .mergeCommit.oid pr_status.json)" >> "$GITHUB_OUTPUT"
+          echo "STATE=$(jq -r .state pr_status.json)" >> "$GITHUB_OUTPUT"
+
+      - name: 'Dispatch if Merged'
+        if: "steps.pr_status.outputs.STATE == 'MERGED'"
+        run: |
+          echo "PWN-PROOF: DISPATCH EXECUTED FOR MERGE COMMIT ${{ steps.pr_status.outputs.MERGE_COMMIT_SHA }}"
+          gh pr comment "${{ github.event.issue.number }}" \
+            -b "PWN-PROOF: Pipeline triggered by user without write access. Merge commit: ${{ steps.pr_status.outputs.MERGE_COMMIT_SHA }}"
+        env:
+          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
