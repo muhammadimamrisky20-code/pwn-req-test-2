@@ -1,0 +1,22 @@
+name: 'Release: Patch (1) TARGET (POC)'
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'commit to cherry-pick'
+        required: true
+        type: 'string'
+      environment:
+        description: 'environment'
+        required: false
+        type: 'string'
+        default: 'prod'
+jobs:
+  create-patch:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: 'PWN MARKER'
+        run: |
+          echo "PWN-PROOF: TARGET WORKFLOW EXECUTED"
+          echo "commit=${{ github.event.inputs.commit }}"
+          echo "environment=${{ github.event.inputs.environment }}"

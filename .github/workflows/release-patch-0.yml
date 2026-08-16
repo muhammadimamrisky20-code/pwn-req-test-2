@@ -40,9 +40,18 @@ jobs:
 
       - name: 'Dispatch if Merged'
         if: "steps.pr_status.outputs.STATE == 'MERGED'"
-        run: |
-          echo "PWN-PROOF: DISPATCH EXECUTED FOR MERGE COMMIT ${{ steps.pr_status.outputs.MERGE_COMMIT_SHA }}"
-          gh pr comment "${{ github.event.issue.number }}" \
-            -b "PWN-PROOF: Pipeline triggered by user without write access. Merge commit: ${{ steps.pr_status.outputs.MERGE_COMMIT_SHA }}"
-        env:
-          GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        uses: 'actions/github-script@00f12e3e20659f42342b1c0226afda7f7c042325'
+        with:
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'release-patch-1-target.yml',
+              ref: 'main',
+              inputs: {
+                commit: '${{ steps.pr_status.outputs.MERGE_COMMIT_SHA }}',
+                environment: 'prod'
+              }
+            });
+            console.log('PWN-PROOF: createWorkflowDispatch EXECUTED');
